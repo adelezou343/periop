@@ -566,6 +566,9 @@ function buildStrokeConclusion(result?: AssessmentResult) {
   const score = result?.details?.esrsScore ?? "未完成";
   const risk = result?.details?.esrsRiskLabel ?? "未评估";
   const annualRisk = result?.details?.esrsAnnualRisk ?? "未评估";
+  if (risk === "中低危") {
+    return `卒中风险评估Essen评分：${score}分，为${risk}。`;
+  }
   return `卒中风险评估Essen评分：${score}分，为${risk}，年卒中复发风险为${annualRisk}。`;
 }
 
