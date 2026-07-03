@@ -28,6 +28,7 @@ function App() {
   const [patient, setPatient] = useState<PatientProfile>(initialPatient);
   const [inputs, setInputs] = useState<Record<string, Record<string, string | boolean>>>({});
   const [copyState, setCopyState] = useState("复制病历文本");
+  const [printState, setPrintState] = useState("打印/另存PDF");
   const mainRef = useRef<HTMLElement | null>(null);
 
   const results = useMemo(
@@ -58,6 +59,20 @@ function App() {
     window.setTimeout(() => setCopyState("复制病历文本"), 1600);
   }
 
+  function handlePrint() {
+    const reportText = buildReportText(patient, results);
+    const isMobileBrowser = /Android|iPhone|iPad|iPod|Mobile|MicroMessenger/i.test(navigator.userAgent);
+    setPrintState("正在打开...");
+    window.setTimeout(() => setPrintState("打印/另存PDF"), 1800);
+
+    if (isMobileBrowser) {
+      openPrintableReport(patient, reportText);
+      return;
+    }
+
+    window.print();
+  }
+
   function navigateTo(view: AssessmentId) {
     setActiveView(view);
     window.requestAnimationFrame(() => {
@@ -79,11 +94,11 @@ function App() {
           </div>
         </div>
         <div className="topActions">
-          <button className="primaryButton" onClick={() => window.print()}>
+          <button type="button" className="primaryButton" onClick={handlePrint}>
             <Icon name="picture_as_pdf" />
-            <span>打印/另存PDF</span>
+            <span>{printState}</span>
           </button>
-          <button className="ghostButton" onClick={copyReport}>
+          <button type="button" className="ghostButton" onClick={copyReport}>
             <Icon name="content_copy" />
             <span>{copyState}</span>
           </button>
@@ -424,6 +439,110 @@ function buildReportText(patient: PatientProfile, results: AssessmentResult[]) {
     ...buildConciseReport(results),
   ];
   return lines.join("\n");
+}
+
+function openPrintableReport(patient: PatientProfile, reportText: string) {
+  const reportWindow = window.open("", "_blank");
+
+  if (!reportWindow) {
+    window.print();
+    return;
+  }
+
+  const title = `围术期器官功能评估-${patient.patientId || "未填写患者ID"}`;
+  const paragraphs = reportText
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .map((line) => `<p>${escapeHtml(line)}</p>`)
+    .join("");
+
+  reportWindow.document.open();
+  reportWindow.document.write(`<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>${escapeHtml(title)}</title>
+    <style>
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        background: #f5f7fb;
+        color: #111827;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        line-height: 1.7;
+      }
+      main {
+        max-width: 760px;
+        margin: 0 auto;
+        padding: 24px 18px 72px;
+      }
+      .toolbar {
+        position: sticky;
+        top: 0;
+        display: flex;
+        gap: 10px;
+        padding: 12px 0 18px;
+        background: #f5f7fb;
+      }
+      button {
+        flex: 1;
+        min-height: 44px;
+        border: 0;
+        border-radius: 8px;
+        background: #0b5aa0;
+        color: white;
+        font-size: 16px;
+        font-weight: 700;
+      }
+      article {
+        border: 1px solid #d7dee8;
+        border-radius: 8px;
+        background: white;
+        padding: 24px;
+      }
+      h1 {
+        margin: 0 0 16px;
+        color: #0b3558;
+        font-size: 24px;
+        line-height: 1.3;
+      }
+      p {
+        margin: 0 0 12px;
+        font-size: 16px;
+      }
+      @media print {
+        body { background: white; }
+        main { max-width: none; padding: 0; }
+        .toolbar { display: none; }
+        article { border: 0; padding: 0; }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <div class="toolbar">
+        <button type="button" onclick="window.print()">打印/另存PDF</button>
+      </div>
+      <article>
+        <h1>围术期器官功能评估摘要</h1>
+        ${paragraphs}
+      </article>
+    </main>
+  </body>
+</html>`);
+  reportWindow.document.close();
+  reportWindow.focus();
+}
+
+function escapeHtml(value: string) {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
 }
 
 function buildConciseReport(results: AssessmentResult[]) {
