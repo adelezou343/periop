@@ -24,7 +24,7 @@ function Icon({ name }: { name: string }) {
 }
 
 function App() {
-  const [activeView, setActiveView] = useState<AssessmentId>("summary");
+  const [activeView, setActiveView] = useState<AssessmentId>("clinical");
   const [patient, setPatient] = useState<PatientProfile>(initialPatient);
   const [inputs, setInputs] = useState<Record<string, Record<string, string | boolean>>>({});
   const [copyState, setCopyState] = useState("复制病历文本");
@@ -124,9 +124,11 @@ function App() {
       <nav className="mobileNav no-print">
         {[
           { id: "clinical" as AssessmentId, label: "资料", icon: "edit_note" },
+          { id: "stroke" as AssessmentId, label: "卒中", icon: "psychology" },
           { id: "cardiac" as AssessmentId, label: "心脏", icon: "favorite" },
           { id: "pulmonary" as AssessmentId, label: "肺部", icon: "air" },
           { id: "thrombosis" as AssessmentId, label: "血栓", icon: "warning" },
+          { id: "liver" as AssessmentId, label: "肝脏", icon: "medical_services" },
           { id: "summary" as AssessmentId, label: "总评", icon: "assignment_turned_in" },
         ].map((item) => (
           <button key={item.id} className={activeView === item.id ? "mobileItem active" : "mobileItem"} onClick={() => setActiveView(item.id)}>
@@ -292,6 +294,8 @@ function AssessmentInput({ field, value, onChange }: { field: AssessmentField; v
 }
 
 function Summary({ patient, results, onEditClinical }: { patient: PatientProfile; results: AssessmentResult[]; onEditClinical: () => void }) {
+  const conciseReport = buildConciseReport(results);
+
   return (
     <>
       <section className="summaryHeader">
@@ -308,36 +312,13 @@ function Summary({ patient, results, onEditClinical }: { patient: PatientProfile
         </button>
       </section>
 
-      <div className="riskGrid">
-        {results.map((result, index) => <RiskCard key={result.moduleId} result={result} featured={index === 0} />)}
-        <div className="compositeCard">
-          <p>Patient Summary</p>
-          <h3>{patient.age ? `${patient.age}岁` : "年龄未填"}</h3>
-          <span>{patient.sex || "性别未填"} · {patient.surgeryName || "未填写拟行手术"}</span>
-          <Icon name="health_and_safety" />
-        </div>
-      </div>
-
-      <section className="recommendations">
+      <section className="conciseReport">
         <div className="sectionTitle">
-          <Icon name="assignment_turned_in" />
-          <h2>围术期建议</h2>
+          <Icon name="summarize" />
+          <h2>总评结论</h2>
         </div>
-        <div className="recommendationGrid">
-          <RecommendationColumn
-            title="术前"
-            items={[
-              ["fact_check", "完善资料核对", "确认五个系统评估表均已导入并完成评分后，再形成正式结论。"],
-              ["science", "系统资料复核", "按卒中、心脏、肺部、血栓和肝脏模块分别补充相应检查与评分资料。"],
-            ]}
-          />
-          <RecommendationColumn
-            title="术后"
-            items={[
-              ["monitor", "重点监测", "根据最终风险分层安排神经、心肺、血栓和肝功能相关监测。"],
-              ["content_paste", "病历记录", "可使用复制按钮生成病历摘要，并结合正式评估表结果修订。"],
-            ]}
-          />
+        <div className="reportText">
+          {conciseReport.map((paragraph) => <p key={paragraph}>{paragraph}</p>)}
         </div>
       </section>
     </>
@@ -431,12 +412,71 @@ function buildReportText(patient: PatientProfile, results: AssessmentResult[]) {
     `年龄/性别：${patient.age || "未填写"} / ${patient.sex || "未填写"}`,
     `拟行手术：${patient.surgeryName || "未填写"}`,
     "",
-    "分系统评估：",
-    ...results.map((result) => `${result.title}：${result.statusText}；${result.scoreLabel}；${result.summary}`),
-    "",
-    "说明：当前首版未导入正式评分表的模块均标记为待配置，不作为确定性医学结论。",
+    ...buildConciseReport(results),
   ];
   return lines.join("\n");
+}
+
+function buildConciseReport(results: AssessmentResult[]) {
+  const findResult = (id: AssessmentId) => results.find((result) => result.moduleId === id);
+  const stroke = findResult("stroke");
+  const cardiac = findResult("cardiac");
+  const pulmonary = findResult("pulmonary");
+  const thrombosis = findResult("thrombosis");
+  const liver = findResult("liver");
+
+  return [
+    buildStrokeConclusion(stroke),
+    buildCardiacConclusion(cardiac),
+    buildPulmonaryConclusion(pulmonary),
+    buildThrombosisConclusion(thrombosis),
+    buildLiverConclusion(liver),
+  ];
+}
+
+function buildStrokeConclusion(result?: AssessmentResult) {
+  const score = result?.details?.esrsScore ?? "未完成";
+  const risk = result?.details?.esrsRiskLabel ?? "未评估";
+  const annualRisk = result?.details?.esrsAnnualRisk ?? "未评估";
+  return `卒中风险评估Essen评分：${score}分，为${risk}，年卒中复发风险为${annualRisk}。`;
+}
+
+function parseSurgicalRisk(value?: string | number | boolean) {
+  const text = typeof value === "string" ? value : "未选择";
+  if (text.includes("低")) return { level: "低", percent: "<1" };
+  if (text.includes("中")) return { level: "中", percent: "1-5" };
+  if (text.includes("高")) return { level: "高", percent: ">5" };
+  return { level: "未选择", percent: "未评估" };
+}
+
+function buildCardiacConclusion(result?: AssessmentResult) {
+  const surgical = parseSurgicalRisk(result?.details?.surgicalCardiacRisk);
+  const rcriClass = result?.details?.rcriClass ?? "未完成";
+  const maceRisk = result?.details?.maceRisk ?? "未评估";
+  const intrinsic = result?.details?.intrinsicRiskLabel ?? "未评估";
+  return `心脏评估该患者的手术心血管风险为${surgical.level}风险（${surgical.percent}%）。改良心脏危险指数RCRI ${rcriClass}，MACE发生风险${maceRisk}%。心脏本身心血管风险为${intrinsic}。`;
+}
+
+function buildPulmonaryConclusion(result?: AssessmentResult) {
+  const score = result?.details?.arozullahScore ?? "未完成";
+  const incidence = result?.details?.arozullahIncidence ?? "未评估";
+  const spo2 = result?.details?.preopSpo2;
+  const oxygen = result?.details?.oxygenRiskLabel ?? "未评估";
+  const spo2Text = typeof spo2 === "number" ? `${spo2}%` : "未填写";
+  return `肺部评估围术期呼吸系统并发症（PPCs）发生率。术后呼吸衰竭预测评分${score}分，术后呼吸衰竭发生率${incidence}。血氧保护度${spo2Text}，${oxygen}。`;
+}
+
+function buildThrombosisConclusion(result?: AssessmentResult) {
+  const risk = result?.details?.riskLabel ?? "未评估";
+  const score = result?.details?.score ?? "未完成";
+  return `血栓栓塞风险评估${risk}（Caprini评分${score}分）。`;
+}
+
+function buildLiverConclusion(result?: AssessmentResult) {
+  const score = result?.details?.score ?? "未完成";
+  const childPughClass = String(result?.details?.childPughClass ?? "未评估").replace("级", "");
+  const prognosis = String(result?.details?.prognosis ?? "未评估").replace("手术风险", "");
+  return `肝脏评估Child-Pugh评分${score}分，为${childPughClass}级手术，手术风险${prognosis}。`;
 }
 
 createRoot(document.getElementById("root")!).render(

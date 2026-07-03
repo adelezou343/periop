@@ -575,6 +575,25 @@ textarea {
   padding: 32px;
 }
 
+.conciseReport {
+  border: 1px solid var(--outline-variant);
+  border-radius: 8px;
+  background: var(--surface-container-lowest);
+  padding: 28px;
+}
+
+.reportText {
+  display: grid;
+  gap: 14px;
+  color: var(--on-background);
+  font-size: 17px;
+  line-height: 1.8;
+}
+
+.reportText p {
+  margin: 0;
+}
+
 .sectionTitle {
   gap: 12px;
   margin-bottom: 24px;
@@ -648,7 +667,9 @@ textarea {
     bottom: 0;
     left: 0;
     display: flex;
-    justify-content: space-around;
+    justify-content: flex-start;
+    gap: 4px;
+    overflow-x: auto;
     border-top: 1px solid var(--outline-variant);
     background: var(--surface);
     padding: 8px;
@@ -663,6 +684,7 @@ textarea {
     background: transparent;
     color: var(--on-surface-variant);
     padding: 6px 10px;
+    min-width: 62px;
     font-size: 12px;
     font-weight: 800;
   }
@@ -722,6 +744,15 @@ textarea {
 
   .mainCanvas {
     padding: 24px 16px 88px;
+  }
+
+  .conciseReport {
+    padding: 20px;
+  }
+
+  .reportText {
+    font-size: 16px;
+    line-height: 1.75;
   }
 
   .pageHeading h2,

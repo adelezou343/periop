@@ -79,6 +79,8 @@ function evaluateStroke(inputs: Record<string, string | boolean>, patient: Patie
   const esrsScore = Math.max(rawEsrsScore, 2);
   const esrsStatus = esrsScore <= 2 ? "ESRS 中低危" : esrsScore <= 6 ? "ESRS 高度风险" : "ESRS 极高度风险";
   const esrsLevel: RiskLevel = esrsScore <= 2 ? "low" : "high";
+  const esrsRiskLabel = esrsScore <= 2 ? "中低危" : esrsScore <= 6 ? "高风险" : "极高度风险";
+  const esrsAnnualRisk = esrsScore <= 2 ? "未标注" : esrsScore <= 6 ? "7-9%" : "11%";
   const esrsRiskText = esrsScore <= 2 ? "0-2分，中低危；截图表未标注年卒中复发风险。" : esrsScore <= 6 ? "3-6分，高度风险；年卒中复发风险约7%-9%。" : "6分以上，极高度风险；年卒中复发风险约11%。";
 
   const hasAf = isChecked(inputs, "atrialFibrillation");
@@ -129,6 +131,12 @@ function evaluateStroke(inputs: Record<string, string | boolean>, patient: Patie
     factors,
     recommendations,
     configured: true,
+    details: {
+      esrsScore,
+      esrsRiskLabel,
+      esrsAnnualRisk,
+      chaScore,
+    },
   };
 }
 
@@ -190,7 +198,7 @@ function evaluatePulmonary(inputs: Record<string, string | boolean>, patient: Pa
     [`手术类型：${surgeryType}`, surgeryTypeScores[surgeryType] ?? 0, surgeryType !== "未选择" && surgeryType !== "其他"],
     ["急诊手术", 11, isChecked(inputs, "emergencySurgery")],
     ["白蛋白<30 g/L", 9, albumin !== undefined && albumin < 30],
-    ["尿素氮>0.3 g/L（10.68 umol/L）", 8, bun !== undefined && bun > 0.3],
+    ["尿素氮>10.68 mmol/L", 8, bun !== undefined && bun > 10.68],
     ["部分或完全依赖性功能状态", 7, isChecked(inputs, "dependentFunctionalStatus")],
     ["COPD病史", 6, isChecked(inputs, "copd")],
     ["年龄>70岁", 6, age !== undefined && age > 70],
@@ -200,6 +208,7 @@ function evaluatePulmonary(inputs: Record<string, string | boolean>, patient: Pa
 
   const arozullahScore = arozullahItems.reduce((total, [, score, active]) => total + (active ? score : 0), 0);
   const arozullahLevel: RiskLevel = arozullahScore <= 10 ? "low" : arozullahScore <= 19 ? "moderate" : "high";
+  const arozullahIncidence = arozullahScore <= 10 ? "0.5%" : arozullahScore <= 19 ? "1.8%" : arozullahScore <= 27 ? "4.2%" : arozullahScore <= 40 ? "10.1%" : "26.6%";
   const arozullahRiskText =
     arozullahScore <= 10
       ? "Arozullah评分≤10分，术后急性呼吸衰竭发生率约0.5%。"
@@ -302,6 +311,13 @@ function evaluatePulmonary(inputs: Record<string, string | boolean>, patient: Pa
       "进行上腹部或开胸手术并发症危险性较大，肺部手术危险性更大。",
     ],
     configured: true,
+    details: {
+      arozullahScore,
+      arozullahIncidence,
+      preopSpo2,
+      oxygenRiskLabel: preopSpo2 === undefined ? "未评估" : preopSpo2 < 90 ? "风险增加" : "手术风险小",
+      pftStatus,
+    },
   };
 }
 
@@ -378,6 +394,7 @@ function evaluateCardiac(inputs: Record<string, string | boolean>, patient: Pati
   recommendations.push(pathway);
 
   const level: RiskLevel = hasModifiers || biomarkersAbnormal ? "high" : calculatedRiskElevated ? "moderate" : "low";
+  const intrinsicRiskLabel = level === "high" ? "高风险" : level === "moderate" ? "中风险" : "低风险";
   const activeRcriFactors = rcriItems.filter(([, active]) => active).map(([label]) => label);
 
   return {
@@ -390,6 +407,13 @@ function evaluateCardiac(inputs: Record<string, string | boolean>, patient: Pati
     factors: [`手术风险：${surgicalCardiacRisk}`, ...activeRcriFactors, ...activeModifiers],
     recommendations,
     configured: true,
+    details: {
+      surgicalCardiacRisk,
+      rcriScore,
+      rcriClass,
+      maceRisk,
+      intrinsicRiskLabel,
+    },
   };
 }
 
@@ -407,8 +431,10 @@ function selectedLabel(inputs: Record<string, string | boolean>, key: string) {
 }
 
 function evaluateThrombosis(inputs: Record<string, string | boolean>, patient: PatientProfile): AssessmentResult {
+  const age = numericAge(patient);
+  const ageGroup = age === undefined ? "年龄未填写" : age <= 40 ? "≤40岁" : age <= 60 ? "41-60岁" : age <= 74 ? "61-74岁" : "≥75岁";
   const groupedItems: Array<[string, number, string | undefined]> = [
-    ["年龄", selectedScore(inputs, "ageGroup", { "≤40岁": 0, "41-60岁": 1, "61-74岁": 2, "≥75岁": 3 }), selectedLabel(inputs, "ageGroup")],
+    ["年龄", age === undefined ? 0 : selectedScore({ ageGroup }, "ageGroup", { "≤40岁": 0, "41-60岁": 1, "61-74岁": 2, "≥75岁": 3 }), age === undefined ? undefined : ageGroup],
     ["活动", selectedScore(inputs, "mobility", { 无: 0, "限制活动<72h": 1, "限制活动≥72h": 2 }), selectedLabel(inputs, "mobility")],
     ["留置中心静脉导管", selectedScore(inputs, "centralVenousCatheter", { 无: 0, "中心静脉置管（PICC或CVC）": 2 }), selectedLabel(inputs, "centralVenousCatheter")],
     ["手术相关因素", selectedScore(inputs, "operationDuration", { 无: 0, "手术<45min": 1, "手术≥45min": 2 }), selectedLabel(inputs, "operationDuration")],
@@ -448,6 +474,7 @@ function evaluateThrombosis(inputs: Record<string, string | boolean>, patient: P
   const score = groupScore + additiveScore;
   const level: RiskLevel = score >= 5 ? "high" : score >= 3 ? "moderate" : "low";
   const statusText = score >= 5 ? "Caprini 高危" : score >= 3 ? "Caprini 中危" : "Caprini 低危";
+  const riskLabel = score >= 5 ? "高度风险" : score >= 3 ? "中危" : "低危";
   const factors = [
     ...groupedItems.filter(([, score]) => score > 0).map(([group, score, label]) => `${group}：${label} +${score}`),
     ...additiveItems.filter(([, , active]) => active).map(([label, score]) => `${label} +${score}`),
@@ -464,9 +491,14 @@ function evaluateThrombosis(inputs: Record<string, string | boolean>, patient: P
     recommendations: [
       `Caprini评分：${score}分，${statusText}。`,
       "危险分级：低危0-2分；中危3-4分；高危≥5分。",
-      "年龄、活动、留置中心静脉导管、手术相关因素按各组只选其一；内科、外科、辅助检查、女性患者相关因素按表格可累加。",
+      "年龄根据患者临床资料自动判断；活动、留置中心静脉导管、手术相关因素按各组只选其一；内科、外科、辅助检查、女性患者相关因素按表格可累加。",
     ],
     configured: true,
+    details: {
+      score,
+      riskLabel,
+      ageGroup,
+    },
   };
 }
 
@@ -528,6 +560,11 @@ function evaluateLiver(inputs: Record<string, string | boolean>, patient: Patien
       "Child-Pugh A级5-6分：手术风险小；B级7-9分：手术风险中等；C级10-15分：手术风险大。",
     ],
     configured: true,
+    details: {
+      score: missingItems.length === 0 ? score : undefined,
+      childPughClass,
+      prognosis,
+    },
   };
 }
 
@@ -559,7 +596,6 @@ export const assessmentModules: AssessmentModule[] = [
     shortTitle: "心脏",
     icon: "monitor_heart",
     fields: [
-      { id: "surgicalCardiacRisk", label: "手术本身心血管风险", type: "select", options: ["未选择", "低风险（<1%）", "中等风险（1%-5%）", "高风险（>5%）"] },
       { id: "highRiskSurgery", label: "高危手术（胸腔内、腹腔内和腹股沟以上血管手术）", type: "checkbox" },
       { id: "ischemicHeartDisease", label: "缺血性心脏病", type: "checkbox" },
       { id: "heartFailure", label: "充血性心力衰竭病史", type: "checkbox" },
@@ -578,6 +614,7 @@ export const assessmentModules: AssessmentModule[] = [
       { id: "bnpStatus", label: "BNP/NT-proBNP", type: "select", options: ["未检测", "正常", "异常"] },
       { id: "troponinStatus", label: "肌钙蛋白", type: "select", options: ["未检测", "正常", "异常"] },
       { id: "ecg", label: "心电图/超声/CTA补充资料", type: "textarea", placeholder: "记录EF、瓣膜病、心律失常、CTA、会诊意见等" },
+      { id: "surgicalCardiacRisk", label: "手术本身心血管风险", type: "select", options: ["未选择", "低风险（<1%）", "中等风险（1%-5%）", "高风险（>5%）"] },
     ],
     evaluate: evaluateCardiac,
   },
@@ -590,7 +627,7 @@ export const assessmentModules: AssessmentModule[] = [
       { id: "surgeryType", label: "手术类型（Arozullah）", type: "select", options: ["未选择", "腹主动脉瘤手术", "胸科手术", "神经外科/上腹部/外周血管手术", "颈部手术", "其他"] },
       { id: "emergencySurgery", label: "急诊手术", type: "checkbox" },
       { id: "albumin", label: "白蛋白", type: "number", unit: "g/L" },
-      { id: "bun", label: "尿素氮", type: "number", unit: "g/L" },
+      { id: "bun", label: "尿素氮", type: "number", unit: "mmol/L" },
       { id: "dependentFunctionalStatus", label: "部分或完全依赖性功能状态", type: "checkbox" },
       { id: "copd", label: "COPD/哮喘/限制性通气障碍", type: "checkbox" },
       { id: "duration", label: "预计手术时间", type: "number", unit: "min" },
@@ -608,7 +645,6 @@ export const assessmentModules: AssessmentModule[] = [
     shortTitle: "血栓",
     icon: "bloodtype",
     fields: [
-      { id: "ageGroup", label: "年龄（只选其一）", type: "select", options: ["≤40岁", "41-60岁", "61-74岁", "≥75岁"] },
       { id: "mobility", label: "活动（只选其一）", type: "select", options: ["无", "限制活动<72h", "限制活动≥72h"] },
       { id: "recentStroke", label: "脑卒中（1个月内）", type: "checkbox" },
       { id: "priorVte", label: "VTE病史", type: "checkbox" },

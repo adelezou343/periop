@@ -32,6 +32,7 @@ export interface AssessmentResult {
   factors: string[];
   recommendations: string[];
   configured: boolean;
+  details?: Record<string, string | number | boolean | undefined>;
 }
 
 export interface AssessmentModule {
