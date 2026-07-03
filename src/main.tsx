@@ -59,18 +59,17 @@ function App() {
     window.setTimeout(() => setCopyState("复制病历文本"), 1600);
   }
 
-  function handlePrint() {
+  async function handlePrint() {
     const reportText = buildReportText(patient, results);
-    const isMobileBrowser = /Android|iPhone|iPad|iPod|Mobile|MicroMessenger/i.test(navigator.userAgent);
-    setPrintState("正在打开...");
-    window.setTimeout(() => setPrintState("打印/另存PDF"), 1800);
-
-    if (isMobileBrowser) {
+    setPrintState("生成PDF中...");
+    try {
+      await downloadReportPdf(patient, reportText);
+      setPrintState("已生成PDF");
+    } catch {
       openPrintableReport(patient, reportText);
-      return;
+      setPrintState("已打开打印页");
     }
-
-    window.print();
+    window.setTimeout(() => setPrintState("打印/另存PDF"), 1800);
   }
 
   function navigateTo(view: AssessmentId) {
@@ -374,18 +373,22 @@ function RiskCard({ result, featured }: { result: AssessmentResult; featured?: b
 }
 
 function ResultPanel({ result }: { result: AssessmentResult }) {
+  const showRecommendations = result.moduleId !== "pulmonary" && result.recommendations.length > 0;
+
   return (
     <aside className="resultPanel">
       <p className="eyebrow">当前结果</p>
       <h3>{result.statusText}</h3>
       <strong>{result.scoreLabel}</strong>
       <p>{result.summary}</p>
-      <div>
-        <p className="miniTitle">建议</p>
-        <ul>
-          {result.recommendations.map((item) => <li key={item}>{item}</li>)}
-        </ul>
-      </div>
+      {showRecommendations && (
+        <div>
+          <p className="miniTitle">建议</p>
+          <ul>
+            {result.recommendations.map((item) => <li key={item}>{item}</li>)}
+          </ul>
+        </div>
+      )}
     </aside>
   );
 }
@@ -439,6 +442,193 @@ function buildReportText(patient: PatientProfile, results: AssessmentResult[]) {
     ...buildConciseReport(results),
   ];
   return lines.join("\n");
+}
+
+async function downloadReportPdf(patient: PatientProfile, reportText: string) {
+  const pages = renderReportPages(reportText);
+  const pdfBlob = buildPdfFromJpegs(pages);
+  const fileName = `围术期器官功能评估-${safeFileName(patient.patientId || "未填写患者ID")}.pdf`;
+  const url = URL.createObjectURL(pdfBlob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = fileName;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  window.setTimeout(() => URL.revokeObjectURL(url), 2000);
+}
+
+function renderReportPages(reportText: string) {
+  const width = 1240;
+  const height = 1754;
+  const margin = 92;
+  const bodyFont = '30px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+  const titleFont = '46px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+  const metaFont = '24px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+  const pages: Array<{ bytes: Uint8Array; width: number; height: number }> = [];
+  let canvas = document.createElement("canvas");
+  let context = canvas.getContext("2d");
+  if (!context) {
+    throw new Error("Canvas not supported");
+  }
+  let y = margin;
+  let pageNo = 0;
+
+  function startPage() {
+    canvas = document.createElement("canvas");
+    canvas.width = width;
+    canvas.height = height;
+    context = canvas.getContext("2d");
+    if (!context) {
+      throw new Error("Canvas not supported");
+    }
+    context.fillStyle = "#ffffff";
+    context.fillRect(0, 0, width, height);
+    context.fillStyle = "#0b3558";
+    context.font = titleFont;
+    context.fillText("围术期器官功能评估摘要", margin, margin);
+    context.fillStyle = "#667085";
+    context.font = metaFont;
+    context.fillText(`生成时间：${new Date().toLocaleString("zh-CN")}`, margin, margin + 52);
+    context.strokeStyle = "#d7dee8";
+    context.lineWidth = 2;
+    context.beginPath();
+    context.moveTo(margin, margin + 82);
+    context.lineTo(width - margin, margin + 82);
+    context.stroke();
+    y = margin + 132;
+    pageNo += 1;
+  }
+
+  function finishPage() {
+    if (!context) {
+      return;
+    }
+    context.fillStyle = "#667085";
+    context.font = metaFont;
+    context.fillText(`第 ${pageNo} 页`, width - margin - 90, height - 48);
+    pages.push({
+      bytes: dataUrlToBytes(canvas.toDataURL("image/jpeg", 0.92)),
+      width,
+      height,
+    });
+  }
+
+  function ensureSpace(lineHeight: number) {
+    if (y + lineHeight > height - margin) {
+      finishPage();
+      startPage();
+    }
+  }
+
+  startPage();
+  context.font = bodyFont;
+  context.fillStyle = "#111827";
+
+  for (const rawLine of reportText.split("\n")) {
+    const line = rawLine.trim();
+    if (!line) {
+      y += 22;
+      continue;
+    }
+    const wrapped = wrapCanvasText(context, line, width - margin * 2);
+    for (const textLine of wrapped) {
+      ensureSpace(44);
+      context.fillStyle = line.includes("：") && line.length < 26 ? "#0b3558" : "#111827";
+      context.font = line.includes("：") && line.length < 26 ? '32px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' : bodyFont;
+      context.fillText(textLine, margin, y);
+      y += 44;
+    }
+    y += 14;
+  }
+
+  finishPage();
+  return pages;
+}
+
+function wrapCanvasText(context: CanvasRenderingContext2D, text: string, maxWidth: number) {
+  const lines: string[] = [];
+  let current = "";
+  for (const char of text) {
+    const next = current + char;
+    if (context.measureText(next).width > maxWidth && current) {
+      lines.push(current);
+      current = char;
+    } else {
+      current = next;
+    }
+  }
+  if (current) {
+    lines.push(current);
+  }
+  return lines;
+}
+
+function dataUrlToBytes(dataUrl: string) {
+  const base64 = dataUrl.split(",")[1] ?? "";
+  const binary = window.atob(base64);
+  const bytes = new Uint8Array(binary.length);
+  for (let index = 0; index < binary.length; index += 1) {
+    bytes[index] = binary.charCodeAt(index);
+  }
+  return bytes;
+}
+
+function buildPdfFromJpegs(pages: Array<{ bytes: Uint8Array; width: number; height: number }>) {
+  const encoder = new TextEncoder();
+  const parts: Array<Uint8Array> = [];
+  const offsets: number[] = [];
+  let length = 0;
+
+  function add(part: string | Uint8Array) {
+    const bytes = typeof part === "string" ? encoder.encode(part) : part;
+    parts.push(bytes);
+    length += bytes.length;
+  }
+
+  function startObject(id: number) {
+    offsets[id] = length;
+    add(`${id} 0 obj\n`);
+  }
+
+  add("%PDF-1.4\n");
+  startObject(1);
+  add("<< /Type /Catalog /Pages 2 0 R >>\nendobj\n");
+  startObject(2);
+  const pageObjectIds = pages.map((_, index) => 3 + index * 3);
+  add(`<< /Type /Pages /Kids [${pageObjectIds.map((id) => `${id} 0 R`).join(" ")}] /Count ${pages.length} >>\nendobj\n`);
+
+  pages.forEach((page, index) => {
+    const pageObjectId = 3 + index * 3;
+    const imageObjectId = pageObjectId + 1;
+    const contentObjectId = pageObjectId + 2;
+    const imageName = `Im${index + 1}`;
+
+    startObject(pageObjectId);
+    add(`<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595.28 841.89] /Resources << /XObject << /${imageName} ${imageObjectId} 0 R >> >> /Contents ${contentObjectId} 0 R >>\nendobj\n`);
+
+    startObject(imageObjectId);
+    add(`<< /Type /XObject /Subtype /Image /Width ${page.width} /Height ${page.height} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ${page.bytes.length} >>\nstream\n`);
+    add(page.bytes);
+    add("\nendstream\nendobj\n");
+
+    const content = `q 595.28 0 0 841.89 0 0 cm /${imageName} Do Q`;
+    startObject(contentObjectId);
+    add(`<< /Length ${content.length} >>\nstream\n${content}\nendstream\nendobj\n`);
+  });
+
+  const xrefOffset = length;
+  add(`xref\n0 ${pages.length * 3 + 3}\n`);
+  add("0000000000 65535 f \n");
+  for (let id = 1; id <= pages.length * 3 + 2; id += 1) {
+    add(`${String(offsets[id]).padStart(10, "0")} 00000 n \n`);
+  }
+  add(`trailer\n<< /Size ${pages.length * 3 + 3} /Root 1 0 R >>\nstartxref\n${xrefOffset}\n%%EOF`);
+  return new Blob(parts as unknown as BlobPart[], { type: "application/pdf" });
+}
+
+function safeFileName(value: string) {
+  return value.replace(/[\\/:*?"<>|]/g, "_").trim() || "未填写患者ID";
 }
 
 function openPrintableReport(patient: PatientProfile, reportText: string) {

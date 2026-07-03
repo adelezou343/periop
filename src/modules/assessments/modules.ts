@@ -81,7 +81,7 @@ function evaluateStroke(inputs: Record<string, string | boolean>, patient: Patie
   const esrsLevel: RiskLevel = esrsScore <= 2 ? "low" : "high";
   const esrsRiskLabel = esrsScore <= 2 ? "中低危" : esrsScore <= 6 ? "高风险" : "极高度风险";
   const esrsAnnualRisk = esrsScore <= 2 ? "未标注" : esrsScore <= 6 ? "7-9%" : "11%";
-  const esrsRiskText = esrsScore <= 2 ? "0-2分，中低危；截图表未标注年卒中复发风险。" : esrsScore <= 6 ? "3-6分，高度风险；年卒中复发风险约7%-9%。" : "6分以上，极高度风险；年卒中复发风险约11%。";
+  const esrsRiskText = esrsScore <= 2 ? "0-2分，中低危。" : esrsScore <= 6 ? "3-6分，高度风险；年卒中复发风险约7%-9%。" : "6分以上，极高度风险；年卒中复发风险约11%。";
 
   const hasAf = isChecked(inputs, "atrialFibrillation");
   const chaItems: Array<[string, number, boolean]> = [
@@ -105,7 +105,6 @@ function evaluateStroke(inputs: Record<string, string | boolean>, patient: Patie
 
   const recommendations = [
     `ESRS：${esrsRiskText}`,
-    rawEsrsScore < 2 ? "ESRS最低按2分提交；未勾选危险因素时，最终报告分数仍记为2分。" : "ESRS按已勾选危险因素累计计分。",
     chaRiskText,
   ];
 
