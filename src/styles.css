@@ -1,0 +1,768 @@
+:root {
+  color-scheme: light;
+  --on-error: #ffffff;
+  --surface-bright: #f8f9ff;
+  --secondary: #3c5d9c;
+  --inverse-surface: #213145;
+  --error: #ba1a1a;
+  --on-background: #0b1c30;
+  --surface-dim: #cbdbf5;
+  --surface-container-high: #dce9ff;
+  --surface-container: #e5eeff;
+  --on-surface-variant: #424752;
+  --surface: #f8f9ff;
+  --primary-container: #005eb8;
+  --secondary-container: #99b8fe;
+  --surface-container-low: #eff4ff;
+  --surface-variant: #d3e4fe;
+  --surface-container-highest: #d3e4fe;
+  --outline: #727783;
+  --outline-variant: #c2c6d4;
+  --on-primary: #ffffff;
+  --primary: #00478d;
+  --background: #f8f9ff;
+  --surface-container-lowest: #ffffff;
+  --green: #0f8b5f;
+  --yellow: #a15c00;
+  --max-width: 1280px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100dvh;
+  background: var(--background);
+  color: var(--on-background);
+  font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 16px;
+  line-height: 1.5;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+.material-symbols-outlined {
+  font-variation-settings: "FILL" 0, "wght" 400, "GRAD" 0, "opsz" 24;
+  vertical-align: middle;
+}
+
+.topbar {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  max-width: var(--max-width);
+  margin: 0 auto;
+  padding: 8px 24px;
+  border-bottom: 1px solid var(--outline-variant);
+  background: color-mix(in srgb, var(--surface) 94%, transparent);
+  backdrop-filter: blur(12px);
+}
+
+.brand,
+.topActions,
+.riskTop,
+.sectionTitle,
+.metaLine {
+  display: flex;
+  align-items: center;
+}
+
+.brand {
+  gap: 16px;
+}
+
+.brandIcon {
+  display: grid;
+  width: 40px;
+  height: 40px;
+  place-items: center;
+  border-radius: 12px;
+  background: var(--primary-container);
+  color: #c8daff;
+}
+
+.brand h1 {
+  margin: 0;
+  color: var(--primary);
+  font-size: 24px;
+  line-height: 32px;
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
+.brand p,
+.pageHeading p,
+.summaryHeader p,
+.metaLine,
+.riskCard p,
+.recItem p,
+.resultPanel p,
+.privacyNote p {
+  margin: 0;
+  color: var(--on-surface-variant);
+}
+
+.topActions {
+  gap: 12px;
+}
+
+.primaryButton,
+.secondaryButton,
+.ghostButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 40px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  padding: 8px 16px;
+  font-weight: 700;
+}
+
+.primaryButton {
+  background: var(--primary);
+  color: var(--on-primary);
+}
+
+.secondaryButton {
+  background: var(--primary-container);
+  color: #c8daff;
+}
+
+.ghostButton {
+  border-color: var(--outline-variant);
+  background: var(--surface-container-lowest);
+  color: var(--on-background);
+}
+
+.layout {
+  max-width: var(--max-width);
+  margin: 0 auto;
+}
+
+.sidebar {
+  position: fixed;
+  top: 0;
+  bottom: 0;
+  width: 320px;
+  padding-top: 76px;
+  border-right: 1px solid var(--outline-variant);
+  background: var(--surface-container-low);
+  display: flex;
+  flex-direction: column;
+}
+
+.sidebarInner {
+  padding: 24px;
+}
+
+.sidebarTitle {
+  margin: 0 0 24px;
+  color: var(--primary);
+  font-size: 20px;
+  line-height: 28px;
+  font-weight: 700;
+}
+
+.sideNav {
+  display: grid;
+  gap: 6px;
+}
+
+.navItem {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  border: 0;
+  border-radius: 8px;
+  padding: 12px 16px;
+  background: transparent;
+  color: var(--on-surface-variant);
+  text-align: left;
+}
+
+.navItem.active {
+  border-radius: 12px;
+  background: var(--secondary-container);
+  color: #244885;
+  font-weight: 700;
+}
+
+.privacyNote {
+  margin-top: auto;
+  padding: 24px;
+}
+
+.privacyNote > div {
+  border: 1px solid var(--outline-variant);
+  border-radius: 8px;
+  background: var(--surface-container-highest);
+  padding: 16px;
+}
+
+.privacyNote div div {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--primary);
+  margin-bottom: 8px;
+}
+
+.mainCanvas {
+  margin-left: 320px;
+  padding: 32px 24px 80px;
+}
+
+.pageHeading,
+.summaryHeader {
+  margin-bottom: 32px;
+}
+
+.pageHeading h2,
+.summaryHeader h2 {
+  margin: 0 0 8px;
+  font-size: 32px;
+  line-height: 40px;
+  font-weight: 800;
+  letter-spacing: 0;
+}
+
+.summaryHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 24px;
+}
+
+.metaLine {
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.metaLine span {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.codePill {
+  border-radius: 999px;
+  background: var(--surface-variant);
+  padding: 4px 12px;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 12px;
+  text-transform: uppercase;
+}
+
+.formGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  max-width: 900px;
+}
+
+.formGrid.single {
+  grid-template-columns: 1fr;
+}
+
+.field {
+  display: grid;
+  gap: 6px;
+}
+
+.field.wide {
+  grid-column: 1 / -1;
+}
+
+.field span,
+.miniTitle,
+.eyebrow {
+  color: var(--on-surface-variant);
+  font-size: 12px;
+  line-height: 16px;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+input,
+select,
+textarea {
+  width: 100%;
+  min-height: 44px;
+  border: 1px solid var(--outline-variant);
+  border-radius: 8px;
+  background: var(--surface-container-lowest);
+  color: var(--on-background);
+  padding: 10px 12px;
+}
+
+textarea {
+  min-height: 96px;
+  resize: vertical;
+}
+
+.unitWrap {
+  position: relative;
+}
+
+.unit {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--outline);
+}
+
+.checkRow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 52px;
+  border: 1px solid var(--outline-variant);
+  border-radius: 8px;
+  background: var(--surface-container-lowest);
+  padding: 12px;
+  font-weight: 600;
+}
+
+.checkRow input {
+  width: 20px;
+  min-height: 20px;
+}
+
+.editorSplit {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 340px;
+  gap: 24px;
+}
+
+.editorMain {
+  display: grid;
+  gap: 20px;
+}
+
+.referencePanel {
+  border: 1px solid var(--outline-variant);
+  border-radius: 8px;
+  background: var(--surface-container-low);
+  padding: 20px;
+}
+
+.referenceHeader {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  margin-bottom: 16px;
+  color: var(--primary);
+}
+
+.referenceHeader h3 {
+  margin: 0 0 4px;
+  font-size: 18px;
+  line-height: 26px;
+}
+
+.referenceHeader p {
+  margin: 0;
+  color: var(--on-surface-variant);
+  font-size: 14px;
+}
+
+.referenceGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.referenceColumn {
+  border: 1px solid var(--outline-variant);
+  border-radius: 8px;
+  background: var(--surface-container-lowest);
+  overflow: hidden;
+}
+
+.referenceColumn h4 {
+  margin: 0;
+  background: var(--primary-container);
+  color: var(--on-primary);
+  padding: 10px 12px;
+  font-size: 15px;
+  line-height: 20px;
+}
+
+.referenceColumn ul {
+  margin: 0;
+  padding: 12px 12px 12px 28px;
+  color: var(--on-surface-variant);
+  font-size: 14px;
+  line-height: 20px;
+}
+
+.referenceColumn li + li {
+  margin-top: 8px;
+}
+
+.resultPanel,
+.recommendations,
+.riskCard,
+.compositeCard {
+  border-radius: 8px;
+}
+
+.resultPanel {
+  align-self: start;
+  border: 1px solid var(--outline-variant);
+  background: var(--surface-container-low);
+  padding: 24px;
+}
+
+.resultPanel h3 {
+  margin: 4px 0 6px;
+  color: var(--primary);
+  font-size: 24px;
+}
+
+.resultPanel strong {
+  display: block;
+  margin-bottom: 16px;
+}
+
+.resultPanel ul {
+  margin: 8px 0 0;
+  padding-left: 20px;
+  color: var(--on-surface-variant);
+}
+
+.riskGrid {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  gap: 16px;
+  margin-bottom: 32px;
+}
+
+.riskCard {
+  grid-column: span 4;
+  border: 1px solid var(--outline-variant);
+  border-left: 4px solid var(--outline);
+  background: var(--surface);
+  padding: 24px;
+}
+
+.riskCard.featured {
+  grid-column: span 8;
+}
+
+.riskCard.pending {
+  border-left-color: var(--outline);
+}
+
+.riskCard.low {
+  border-left-color: var(--green);
+}
+
+.riskCard.moderate {
+  border-left-color: #eab308;
+}
+
+.riskCard.high {
+  border-left-color: var(--error);
+}
+
+.riskTop {
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.riskKicker {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--primary);
+  font-weight: 700;
+}
+
+.riskCard h3 {
+  margin: 4px 0 0;
+  font-size: 22px;
+  line-height: 28px;
+  overflow-wrap: anywhere;
+}
+
+.scoreBox {
+  text-align: right;
+}
+
+.scoreBox strong {
+  display: block;
+  font-size: 18px;
+}
+
+.scoreBox p {
+  font-size: 14px;
+}
+
+.tagRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 20px;
+}
+
+.tagRow span {
+  border-radius: 999px;
+  background: var(--surface-container-high);
+  color: var(--primary);
+  padding: 4px 10px;
+  font-size: 12px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.compositeCard {
+  position: relative;
+  grid-column: span 4;
+  overflow: hidden;
+  background: var(--primary);
+  color: var(--on-primary);
+  padding: 24px;
+}
+
+.compositeCard p {
+  margin: 0 0 8px;
+  color: #c8daff;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.compositeCard h3 {
+  margin: 0 0 16px;
+  font-size: 32px;
+  line-height: 40px;
+}
+
+.compositeCard > .material-symbols-outlined {
+  position: absolute;
+  right: -28px;
+  bottom: -34px;
+  font-size: 150px;
+  opacity: 0.12;
+}
+
+.recommendations {
+  border: 1px solid var(--outline-variant);
+  background: var(--surface-container-low);
+  padding: 32px;
+}
+
+.sectionTitle {
+  gap: 12px;
+  margin-bottom: 24px;
+  color: var(--primary);
+}
+
+.sectionTitle h2 {
+  margin: 0;
+}
+
+.recommendationGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.recColumn {
+  display: grid;
+  gap: 16px;
+}
+
+.recColumn h3 {
+  margin: 0;
+}
+
+.recItem {
+  display: flex;
+  gap: 14px;
+  border: 1px solid var(--outline-variant);
+  border-radius: 8px;
+  background: white;
+  padding: 16px;
+}
+
+.recItem > .material-symbols-outlined {
+  color: var(--primary);
+}
+
+.recItem strong {
+  display: block;
+  margin-bottom: 4px;
+}
+
+.mobileNav {
+  display: none;
+}
+
+@media (max-width: 1023px) {
+  .topbar {
+    gap: 16px;
+    align-items: flex-start;
+  }
+
+  .topActions {
+    flex-wrap: wrap;
+    justify-content: flex-end;
+  }
+
+  .sidebar {
+    display: none;
+  }
+
+  .mainCanvas {
+    margin-left: 0;
+  }
+
+  .mobileNav {
+    position: fixed;
+    z-index: 30;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    display: flex;
+    justify-content: space-around;
+    border-top: 1px solid var(--outline-variant);
+    background: var(--surface);
+    padding: 8px;
+  }
+
+  .mobileItem {
+    display: grid;
+    gap: 2px;
+    place-items: center;
+    border: 0;
+    border-radius: 999px;
+    background: transparent;
+    color: var(--on-surface-variant);
+    padding: 6px 10px;
+    font-size: 12px;
+    font-weight: 800;
+  }
+
+  .mobileItem.active {
+    background: var(--primary-container);
+    color: #c8daff;
+  }
+
+  .editorSplit,
+  .recommendationGrid,
+  .referenceGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .riskCard,
+  .riskCard.featured,
+  .compositeCard {
+    grid-column: span 12;
+  }
+}
+
+@media (max-width: 720px) {
+  .topbar,
+  .summaryHeader,
+  .brand {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .brand {
+    gap: 10px;
+  }
+
+  .brand h1 {
+    font-size: 22px;
+    line-height: 30px;
+  }
+
+  .brandIcon {
+    display: none;
+  }
+
+  .topActions {
+    flex-direction: column;
+    align-items: stretch;
+    justify-content: stretch;
+    width: 100%;
+  }
+
+  .primaryButton,
+  .ghostButton,
+  .secondaryButton {
+    width: 100%;
+    padding-inline: 10px;
+  }
+
+  .mainCanvas {
+    padding: 24px 16px 88px;
+  }
+
+  .pageHeading h2,
+  .summaryHeader h2 {
+    font-size: 24px;
+    line-height: 32px;
+    overflow-wrap: anywhere;
+  }
+
+  .formGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .riskTop {
+    display: grid;
+  }
+
+  .scoreBox {
+    text-align: left;
+  }
+}
+
+@media print {
+  body {
+    background: white;
+  }
+
+  .no-print,
+  .mobileNav,
+  .sidebar {
+    display: none !important;
+  }
+
+  .mainCanvas {
+    margin: 0;
+    padding: 0;
+  }
+
+  .riskCard,
+  .recommendations,
+  .compositeCard {
+    break-inside: avoid;
+  }
+}
