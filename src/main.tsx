@@ -1,4 +1,4 @@
-import { StrictMode, useMemo, useState } from "react";
+import { StrictMode, useMemo, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
 import "./styles.css";
 import { assessmentModules } from "./modules/assessments/modules";
@@ -28,6 +28,7 @@ function App() {
   const [patient, setPatient] = useState<PatientProfile>(initialPatient);
   const [inputs, setInputs] = useState<Record<string, Record<string, string | boolean>>>({});
   const [copyState, setCopyState] = useState("复制病历文本");
+  const mainRef = useRef<HTMLElement | null>(null);
 
   const results = useMemo(
     () => assessmentModules.map((module) => module.evaluate(inputs[module.id] ?? {}, patient)),
@@ -55,6 +56,14 @@ function App() {
     await navigator.clipboard.writeText(text);
     setCopyState("已复制");
     window.setTimeout(() => setCopyState("复制病历文本"), 1600);
+  }
+
+  function navigateTo(view: AssessmentId) {
+    setActiveView(view);
+    window.requestAnimationFrame(() => {
+      mainRef.current?.scrollIntoView({ block: "start" });
+      window.scrollTo({ top: 0, behavior: "auto" });
+    });
   }
 
   return (
@@ -90,7 +99,7 @@ function App() {
                 <button
                   key={item.id}
                   className={activeView === item.id ? "navItem active" : "navItem"}
-                  onClick={() => setActiveView(item.id)}
+                  onClick={() => navigateTo(item.id)}
                 >
                   <Icon name={item.icon} />
                   <span>{item.label}</span>
@@ -107,7 +116,7 @@ function App() {
           </div>
         </aside>
 
-        <main className="mainCanvas">
+        <main className="mainCanvas" ref={mainRef}>
           {activeView === "clinical" && <ClinicalData patient={patient} onChange={updatePatient} />}
           {activeModule && (
             <AssessmentEditor
@@ -117,7 +126,7 @@ function App() {
               onChange={(fieldId, value) => updateAssessment(activeModule.id, fieldId, value)}
             />
           )}
-          {activeView === "summary" && <Summary patient={patient} results={results} onEditClinical={() => setActiveView("clinical")} />}
+          {activeView === "summary" && <Summary patient={patient} results={results} onEditClinical={() => navigateTo("clinical")} />}
         </main>
       </div>
 
@@ -131,7 +140,7 @@ function App() {
           { id: "liver" as AssessmentId, label: "肝脏", icon: "medical_services" },
           { id: "summary" as AssessmentId, label: "总评", icon: "assignment_turned_in" },
         ].map((item) => (
-          <button key={item.id} className={activeView === item.id ? "mobileItem active" : "mobileItem"} onClick={() => setActiveView(item.id)}>
+          <button key={item.id} className={activeView === item.id ? "mobileItem active" : "mobileItem"} onClick={() => navigateTo(item.id)}>
             <Icon name={item.icon} />
             <span>{item.label}</span>
           </button>
