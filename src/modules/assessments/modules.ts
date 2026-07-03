@@ -180,6 +180,27 @@ function maxRisk(levels: Array<RiskLevel | undefined>): RiskLevel {
 
 function evaluatePulmonary(inputs: Record<string, string | boolean>, patient: PatientProfile): AssessmentResult {
   const age = numericAge(patient);
+  const ariscatSpo2 = numberInput(inputs, "ariscatSpo2");
+  const ariscatIncision = typeof inputs.ariscatIncision === "string" ? inputs.ariscatIncision : "未选择";
+  const ariscatDuration = numberInput(inputs, "duration");
+  const ariscatAgeScore = age === undefined ? 0 : age > 80 ? 16 : age >= 51 ? 3 : 0;
+  const ariscatSpo2Score = ariscatSpo2 === undefined ? 0 : ariscatSpo2 <= 90 ? 24 : ariscatSpo2 <= 95 ? 8 : 0;
+  const ariscatIncisionScore = ariscatIncision === "胸腔内" ? 24 : ariscatIncision === "上腹部" ? 15 : 0;
+  const ariscatDurationScore = ariscatDuration === undefined ? 0 : ariscatDuration > 180 ? 23 : ariscatDuration > 120 ? 16 : 0;
+  const ariscatItems: Array<[string, number, boolean]> = [
+    [age === undefined ? "年龄未填写" : age > 80 ? "年龄>80岁" : age >= 51 ? "年龄51-80岁" : "年龄<51岁", ariscatAgeScore, age !== undefined && ariscatAgeScore > 0],
+    [ariscatSpo2 === undefined ? "术前SpO2未填写" : ariscatSpo2 <= 90 ? "术前SpO2≤90%" : ariscatSpo2 <= 95 ? "术前SpO2 91-95%" : "术前SpO2≥96%", ariscatSpo2Score, ariscatSpo2 !== undefined && ariscatSpo2Score > 0],
+    ["近1个月内呼吸道感染", 17, isChecked(inputs, "recentRespiratoryInfection")],
+    ["术前贫血（血红蛋白≤10g/dL）", 11, isChecked(inputs, "preopAnemia")],
+    [`手术切口：${ariscatIncision}`, ariscatIncisionScore, ariscatIncisionScore > 0],
+    [ariscatDuration === undefined ? "手术时长未填写" : ariscatDuration > 180 ? "手术时长>3小时" : ariscatDuration > 120 ? "手术时长>2-3小时" : "手术时长≤2小时", ariscatDurationScore, ariscatDuration !== undefined && ariscatDurationScore > 0],
+    ["急诊手术", 8, isChecked(inputs, "emergencySurgery")],
+  ];
+  const ariscatScore = ariscatItems.reduce((total, [, score, active]) => total + (active ? score : 0), 0);
+  const ariscatLevel: RiskLevel = ariscatScore < 26 ? "low" : ariscatScore <= 45 ? "moderate" : "high";
+  const ariscatRiskLabel = ariscatScore < 26 ? "低风险" : ariscatScore <= 45 ? "中风险" : "高风险";
+  const ariscatIncidence = ariscatScore < 26 ? "1.6%" : ariscatScore <= 45 ? "13.3%" : "42.1%";
+
   const surgeryType = typeof inputs.surgeryType === "string" ? inputs.surgeryType : "未选择";
   const surgeryTypeScores: Record<string, number> = {
     腹主动脉瘤手术: 27,
@@ -220,103 +241,33 @@ function evaluatePulmonary(inputs: Record<string, string | boolean>, patient: Pa
             ? "Arozullah评分28-40分，术后急性呼吸衰竭发生率约10.1%。"
             : "Arozullah评分>40分，术后急性呼吸衰竭发生率约26.6%。";
 
-  const preopSpo2 = numberInput(inputs, "preopSpo2");
-  const pftContext = typeof inputs.pftContext === "string" ? inputs.pftContext : "未选择";
-  const fev1 = numberInput(inputs, "fev1");
-  const fev1Percent = numberInput(inputs, "fev1Percent");
-
-  const oxygenLevel: RiskLevel = preopSpo2 === undefined ? "pending" : preopSpo2 < 90 ? "high" : "low";
-  const oxygenStatus = oxygenLevel === "pending" ? "术前血氧饱和度未输入" : oxygenLevel === "high" ? "术前血氧饱和度<90%" : "术前血氧饱和度≥90%";
-  let pftLevel: RiskLevel = "pending";
-  let pftStatus = "肺功能未评估";
-  const pftMissing: string[] = [];
-  const pftFactors: string[] = [];
-
-  if (pftContext === "非胸部手术") {
-    if (fev1Percent === undefined) {
-      pftMissing.push("FEV1%预计值");
-      pftStatus = "非胸部手术肺功能资料不完整";
-    } else if (fev1Percent > 60) {
-      pftLevel = "low";
-      pftStatus = "非胸部手术肺功能筛选通过";
-      pftFactors.push(`FEV1%预计值 ${fev1Percent}% >60%`);
-    } else {
-      pftLevel = "high";
-      pftStatus = "非胸部手术肺功能并发症风险增加";
-      pftFactors.push(`FEV1%预计值 ${fev1Percent}% ≤60%`);
-    }
-  } else if (pftContext === "全肺切除术") {
-    if (fev1 === undefined) {
-      pftMissing.push("FEV1(L)");
-      pftStatus = "全肺切除术肺功能资料不完整";
-    } else if (fev1 > 2) {
-      pftLevel = "low";
-      pftStatus = "FEV1支持全肺切除术";
-      pftFactors.push(`FEV1 ${fev1}L >2.0L`);
-    } else {
-      pftLevel = "high";
-      pftStatus = "FEV1未达传统全肺切除阈值";
-      pftFactors.push(`FEV1 ${fev1}L ≤2.0L`);
-    }
-  } else if (pftContext === "肺叶切除术") {
-    if (fev1 === undefined) {
-      pftMissing.push("FEV1(L)");
-      pftStatus = "肺叶切除术肺功能资料不完整";
-    } else if (fev1 > 1.5) {
-      pftLevel = "low";
-      pftStatus = "FEV1支持肺叶切除术";
-      pftFactors.push(`FEV1 ${fev1}L >1.5L`);
-    } else {
-      pftLevel = "high";
-      pftStatus = "FEV1未达传统肺叶切除阈值";
-      pftFactors.push(`FEV1 ${fev1}L ≤1.5L`);
-    }
-  } else {
-    pftMissing.push("肺功能适用场景");
-  }
-
-  const displayLevel = maxRisk([arozullahLevel, oxygenLevel, pftLevel]);
   const arozullahStatus = arozullahLevel === "high" ? "Arozullah 高风险" : arozullahLevel === "moderate" ? "Arozullah 中等风险" : "Arozullah 低风险";
-
-  const oxygenFactors = preopSpo2 === undefined ? [] : [`术前SpO2 ${preopSpo2}%${preopSpo2 < 90 ? "：增加术后并发症风险" : "：未提示<90%风险"}`];
+  const ariscatStatus = `ARISCAT ${ariscatRiskLabel}`;
+  const displayLevel = maxRisk([ariscatLevel, arozullahLevel]);
+  const activeAriscatFactors = ariscatItems.filter(([, , active]) => active).map(([label, score]) => `${label} +${score}`);
   const activeArozullahFactors = arozullahItems.filter(([, , active]) => active).map(([label, score]) => `${label} +${score}`);
-  const oxygenSummary = preopSpo2 === undefined
-    ? "未输入术前血氧饱和度；缺少：术前SpO2。"
-    : preopSpo2 < 90
-      ? `术前SpO2 ${preopSpo2}%，<90%，会增加术后并发症风险。`
-      : `术前SpO2 ${preopSpo2}%，未低于90%。`;
-  const pftSummary = pftFactors.length
-    ? `${pftStatus}；${pftFactors.join("、")}；缺少：${pftMissing.length ? pftMissing.join("、") : "无"}。`
-    : `${pftStatus}；缺少：${pftMissing.join("、")}。`;
-  const highWarningItems = [
-    ...(oxygenLevel === "high" ? ["术前SpO2<90%"] : []),
-    ...(pftLevel === "high" ? pftFactors : []),
-  ];
 
   return {
     moduleId: "pulmonary",
     title: "肺部评估",
     level: displayLevel,
-    statusText: `${arozullahStatus}；${oxygenStatus}；${pftStatus}`,
-    scoreLabel: `Arozullah ${arozullahScore}分`,
-    summary: `${arozullahRiskText} ${oxygenSummary} ${pftSummary}`,
-    factors: [...activeArozullahFactors, ...oxygenFactors, ...pftFactors],
+    statusText: `${ariscatStatus}；${arozullahStatus}`,
+    scoreLabel: `ARISCAT ${ariscatScore}分；Arozullah ${arozullahScore}分`,
+    summary: `ARISCAT评分${ariscatScore}分，PPCs发生率${ariscatIncidence}，为${ariscatRiskLabel}。${arozullahRiskText}`,
+    factors: [...activeAriscatFactors, ...activeArozullahFactors],
     recommendations: [
+      `ARISCAT风险：${ariscatRiskLabel}，PPCs发生率约${ariscatIncidence}。`,
       `Arozullah风险：${arozullahRiskText}`,
-      `术前血氧饱和度：${oxygenSummary}`,
-      `肺功能：${pftSummary}`,
-      "Arozullah评分、术前血氧饱和度和肺功能反映的临床意义不同，报告中分开呈现。",
-      "不再要求血气分析；术前血氧饱和度<90%提示术后并发症风险增加。肺功能仅对已输入的信息按对应手术类型判断，并备注缺少的指标。",
-      ...(highWarningItems.length ? ["提示存在术后通气不足或咳痰困难风险，易发生术后坠积性肺炎、肺不张，并可能出现呼吸衰竭。"] : []),
+      "肺部评估仅保留ARISCAT评分和Arozullah术后呼吸衰竭预测评分。",
       "进行上腹部或开胸手术并发症危险性较大，肺部手术危险性更大。",
     ],
     configured: true,
     details: {
+      ariscatScore,
+      ariscatRiskLabel,
+      ariscatIncidence,
       arozullahScore,
       arozullahIncidence,
-      preopSpo2,
-      oxygenRiskLabel: preopSpo2 === undefined ? "未评估" : preopSpo2 < 90 ? "风险增加" : "手术风险小",
-      pftStatus,
     },
   };
 }
@@ -624,18 +575,17 @@ export const assessmentModules: AssessmentModule[] = [
     shortTitle: "肺部",
     icon: "air",
     fields: [
+      { id: "ariscatSpo2", label: "术前脉搏血氧饱和度SpO2（ARISCAT）", type: "number", unit: "%" },
+      { id: "recentRespiratoryInfection", label: "近1个月内呼吸道感染（ARISCAT）", type: "checkbox" },
+      { id: "preopAnemia", label: "术前贫血：血红蛋白≤10g/dL（ARISCAT）", type: "checkbox" },
+      { id: "ariscatIncision", label: "手术切口（ARISCAT）", type: "select", options: ["未选择", "其他/外周", "上腹部", "胸腔内"] },
+      { id: "duration", label: "预计手术时间（ARISCAT/Arozullah）", type: "number", unit: "min" },
+      { id: "emergencySurgery", label: "急诊手术（ARISCAT/Arozullah）", type: "checkbox" },
       { id: "surgeryType", label: "手术类型（Arozullah）", type: "select", options: ["未选择", "腹主动脉瘤手术", "胸科手术", "神经外科/上腹部/外周血管手术", "颈部手术", "其他"] },
-      { id: "emergencySurgery", label: "急诊手术", type: "checkbox" },
       { id: "albumin", label: "白蛋白", type: "number", unit: "g/L" },
       { id: "bun", label: "尿素氮", type: "number", unit: "mmol/L" },
       { id: "dependentFunctionalStatus", label: "部分或完全依赖性功能状态", type: "checkbox" },
       { id: "copd", label: "COPD/哮喘/限制性通气障碍", type: "checkbox" },
-      { id: "duration", label: "预计手术时间", type: "number", unit: "min" },
-      { id: "preopSpo2", label: "术前血氧饱和度SpO2", type: "number", unit: "%" },
-      { id: "pftContext", label: "肺功能适用场景", type: "select", options: ["未选择", "非胸部手术", "全肺切除术", "肺叶切除术"] },
-      { id: "fev1", label: "FEV1", type: "number", unit: "L" },
-      { id: "fev1Percent", label: "FEV1%预计值", type: "number", unit: "%" },
-      { id: "pft", label: "肺功能/影像补充资料", type: "textarea", placeholder: "可记录未结构化的肺功能、胸片/CT结论等" },
     ],
     evaluate: evaluatePulmonary,
   },

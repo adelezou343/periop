@@ -567,9 +567,9 @@ function buildStrokeConclusion(result?: AssessmentResult) {
   const risk = result?.details?.esrsRiskLabel ?? "未评估";
   const annualRisk = result?.details?.esrsAnnualRisk ?? "未评估";
   if (risk === "中低危") {
-    return `卒中风险评估Essen评分：${score}分，为${risk}。`;
+    return `卒中风险评估：Essen评分${score}分，为${risk}。`;
   }
-  return `卒中风险评估Essen评分：${score}分，为${risk}，年卒中复发风险为${annualRisk}。`;
+  return `卒中风险评估：Essen评分${score}分，为${risk}，年卒中复发风险为${annualRisk}。`;
 }
 
 function parseSurgicalRisk(value?: string | number | boolean) {
@@ -585,29 +585,29 @@ function buildCardiacConclusion(result?: AssessmentResult) {
   const rcriClass = result?.details?.rcriClass ?? "未完成";
   const maceRisk = result?.details?.maceRisk ?? "未评估";
   const intrinsic = result?.details?.intrinsicRiskLabel ?? "未评估";
-  return `心脏评估该患者的手术心血管风险为${surgical.level}风险（${surgical.percent}%）。改良心脏危险指数RCRI ${rcriClass}，MACE发生风险${maceRisk}%。心脏本身心血管风险为${intrinsic}。`;
+  return `心脏评估：该患者的手术心血管风险为${surgical.level}风险（${surgical.percent}%）。改良心脏危险指数RCRI ${rcriClass}，MACE发生风险${maceRisk}%。心脏本身心血管风险为${intrinsic}。`;
 }
 
 function buildPulmonaryConclusion(result?: AssessmentResult) {
-  const score = result?.details?.arozullahScore ?? "未完成";
-  const incidence = result?.details?.arozullahIncidence ?? "未评估";
-  const spo2 = result?.details?.preopSpo2;
-  const oxygen = result?.details?.oxygenRiskLabel ?? "未评估";
-  const spo2Text = typeof spo2 === "number" ? `${spo2}%` : "未填写";
-  return `肺部评估围术期呼吸系统并发症（PPCs）发生率。术后呼吸衰竭预测评分${score}分，术后呼吸衰竭发生率${incidence}。血氧保护度${spo2Text}，${oxygen}。`;
+  const ariscatRisk = result?.details?.ariscatRiskLabel ?? "未评估";
+  const ariscatScore = result?.details?.ariscatScore ?? "未完成";
+  const ariscatIncidence = result?.details?.ariscatIncidence ?? "未评估";
+  const arozullahScore = result?.details?.arozullahScore ?? "未完成";
+  const arozullahIncidence = result?.details?.arozullahIncidence ?? "未评估";
+  return `肺部评估：围术期呼吸系统并发症（PPCs）发生率为${ariscatRisk}（ARISCAT评分${ariscatScore}分，PPCs发生率${ariscatIncidence}）。术后呼吸衰竭预测评分${arozullahScore}分，术后呼吸衰竭发生率${arozullahIncidence}。`;
 }
 
 function buildThrombosisConclusion(result?: AssessmentResult) {
   const risk = result?.details?.riskLabel ?? "未评估";
   const score = result?.details?.score ?? "未完成";
-  return `血栓栓塞风险评估${risk}（Caprini评分${score}分）。`;
+  return `血栓栓塞风险评估：${risk}（Caprini评分${score}分）。`;
 }
 
 function buildLiverConclusion(result?: AssessmentResult) {
   const score = result?.details?.score ?? "未完成";
   const childPughClass = String(result?.details?.childPughClass ?? "未评估").replace("级", "");
   const prognosis = String(result?.details?.prognosis ?? "未评估").replace("手术风险", "");
-  return `肝脏评估Child-Pugh评分${score}分，为${childPughClass}级手术，手术风险${prognosis}。`;
+  return `肝脏评估：Child-Pugh评分${score}分，为${childPughClass}级手术，手术风险${prognosis}。`;
 }
 
 createRoot(document.getElementById("root")!).render(
